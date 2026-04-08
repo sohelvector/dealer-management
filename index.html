@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dealer Management System</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:    #1a6b3c;
+      --primary-lt: #e8f5ee;
+      --accent:     #f59e0b;
+      --danger:     #dc2626;
+      --success:    #16a34a;
+      --surface:    #ffffff;
+      --bg:         #f1f5f2;
+      --border:     #d1d5db;
+      --text:       #111827;
+      --muted:      #6b7280;
+      --radius:     8px;
+      --shadow:     0 1px 4px rgba(0,0,0,.10);
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Top Nav ──────────────────────────────────────────────── */
+    nav {
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      position: sticky; top: 0; z-index: 100;
+    }
+    nav .brand { font-size: 1.1rem; font-weight: 700; letter-spacing: .3px; }
+    nav .brand span { color: var(--accent); }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tab {
+      background: transparent; border: none; color: rgba(255,255,255,.75);
+      padding: 8px 18px; border-radius: 6px; cursor: pointer;
+      font-size: .875rem; font-weight: 500; transition: all .15s;
+    }
+    .nav-tab:hover   { background: rgba(255,255,255,.12); color: #fff; }
+    .nav-tab.active  { background: rgba(255,255,255,.2);  color: #fff; }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1rem; font-weight: 600;
+      color: var(--primary); margin-bottom: 16px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Stat Cards ───────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px; margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+    }
+    .stat-card .label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .stat-card .value { font-size: 1.6rem; font-weight: 700; color: var(--primary); margin-top: 4px; }
+    .stat-card .sub   { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Form ─────────────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+    .form-group input,
+    .form-group select {
+      height: 40px; padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px; font-size: .9rem;
+      color: var(--text); background: #fff;
+      transition: border-color .15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-lt);
+    }
+    .form-group input.error,
+    .form-group select.error { border-color: var(--danger); }
+    .error-msg { font-size: .75rem; color: var(--danger); margin-top: 3px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 22px; border: none; border-radius: 6px;
+      cursor: pointer; font-size: .9rem; font-weight: 600;
+      transition: all .15s;
+    }
+    .btn-primary {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.15);
+    }
+    .btn-primary:hover { background: #155932; }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+    .btn-outline {
+      background: transparent; color: var(--primary);
+      border: 1.5px solid var(--primary);
+    }
+    .btn-outline:hover { background: var(--primary-lt); }
+    .form-footer { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px;
+      padding: 12px 20px; border-radius: 8px;
+      font-size: .875rem; font-weight: 500;
+      color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.2);
+      transform: translateY(80px); opacity: 0;
+      transition: all .3s ease; z-index: 9999;
+      max-width: 320px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { background: var(--success); }
+    #toast.error   { background: var(--danger); }
+
+    /* ── Filters bar ──────────────────────────────────────────── */
+    .filters-bar {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      align-items: center; margin-bottom: 16px;
+    }
+    .filters-bar input,
+    .filters-bar select {
+      height: 38px; padding: 0 12px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: .875rem; color: var(--text); background: #fff;
+    }
+    .filters-bar input:focus,
+    .filters-bar select:focus { outline: none; border-color: var(--primary); }
+    .filter-search { min-width: 220px; }
+
+    /* ── Table ────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    thead tr { background: var(--primary-lt); }
+    thead th {
+      padding: 10px 14px; text-align: left;
+      font-size: .75rem; font-weight: 700;
+      color: var(--primary); text-transform: uppercase;
+      letter-spacing: .4px; border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--primary-lt); }
+    tbody td { padding: 10px 14px; color: var(--text); vertical-align: middle; }
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 99px; font-size: .72rem; font-weight: 600;
+    }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-amber { background: #fef3c7; color: #b45309; }
+    .badge-red   { background: #fee2e2; color: #b91c1c; }
+    .empty-row td { text-align: center; color: var(--muted); padding: 32px; }
+
+    /* ── Stock Table ──────────────────────────────────────────── */
+    .stock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .stock-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .stock-card .item-name { font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .stock-card .item-qty  { font-size: 1.4rem; font-weight: 700; color: var(--primary); }
+    .stock-card .item-unit { font-size: .75rem; color: var(--muted); }
+    .stock-icon {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: var(--primary-lt); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    /* ── Spinner ──────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block; width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%; animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      nav { padding: 0 12px; }
+      .nav-tab { padding: 8px 12px; font-size: .8rem; }
+      main { padding: 16px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav>
+  <div class="brand">🌾 <span>Dealer</span> Manager</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-tab"        onclick="showPage('sales')">New Sale</button>
+    <button class="nav-tab"        onclick="showPage('records')">Records</button>
+    <button class="nav-tab"        onclick="showPage('stock')">Stock</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ════════════ DASHBOARD PAGE ════════════ -->
+  <div id="page-dashboard" class="page active">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Today's Sales</div>
+        <div class="value" id="stat-today-sales">৳0</div>
+        <div class="sub" id="stat-today-count">0 transactions</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">This Week</div>
+        <div class="value" id="stat-week-sales">৳0</div>
+        <div class="sub" id="stat-week-count">0 transactions</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">This Month</div>
+        <div class="value" id="stat-month-sales">৳0</div>
+        <div class="sub" id="stat-month-count">0 transactions</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Items in Stock</div>
+        <div class="value" id="stat-stock-items">0</div>
+        <div class="sub">product types</div>
+      </div>
+    </div>
+
+    <!-- Recent Sales -->
+    <div class="card">
+      <div class="card-title">📋 Recent Sales (Last 10)</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Customer</th><th>Item</th>
+              <th>Qty</th><th>Unit</th><th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="recent-sales-body">
+            <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Stock Overview -->
+    <div class="card">
+      <div class="card-title">📦 Stock Overview</div>
+      <div class="stock-grid" id="stock-overview-grid">
+        <p style="color:var(--muted);font-size:.875rem;">Loading stock…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ SALES ENTRY PAGE ════════════ -->
+  <div id="page-sales" class="page">
+    <div class="card">
+      <div class="card-title">➕ New Sales Entry</div>
+      <form id="sales-form" novalidate>
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label for="f-item">Item Name *</label>
+            <select id="f-item">
+              <option value="">— Select Item —</option>
+              <option value="Rice (Miniket)">Rice (Miniket)</option>
+              <option value="Rice (Najirshail)">Rice (Najirshail)</option>
+              <option value="Rice (BR-28)">Rice (BR-28)</option>
+              <option value="Rice (Irri)">Rice (Irri)</option>
+              <option value="Lentil (Masoor)">Lentil (Masoor)</option>
+              <option value="Lentil (Moog)">Lentil (Moog)</option>
+              <option value="Wheat Flour">Wheat Flour</option>
+              <option value="Mustard Oil">Mustard Oil</option>
+              <option value="Soybean Oil">Soybean Oil</option>
+              <option value="Sugar">Sugar</option>
+              <option value="Salt">Salt</option>
+              <option value="Other">Other</option>
+            </select>
+            <span class="error-msg" id="err-item"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-qty">Quantity *</label>
+            <input type="number" id="f-qty" placeholder="e.g. 5" min="0.1" step="0.1"/>
+            <span class="error-msg" id="err-qty"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-unit">Unit *</label>
+            <select id="f-unit">
+              <option value="">— Select Unit —</option>
+              <option value="বস্তা">বস্তা (Bag)</option>
+              <option value="মণ">মণ (Mon)</option>
+              <option value="কেজি">কেজি (KG)</option>
+              <option value="লিটার">লিটার (Litre)</option>
+            </select>
+            <span class="error-msg" id="err-unit"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-price">Total Price (৳) *</label>
+            <input type="number" id="f-price" placeholder="e.g. 3500" min="0" step="1"/>
+            <span class="error-msg" id="err-price"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-customer">Customer Name *</label>
+            <input type="text" id="f-customer" placeholder="e.g. Rahman Store"/>
+            <span class="error-msg" id="err-customer"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-phone">Phone Number *</label>
+            <input type="tel" id="f-phone" placeholder="01XXXXXXXXX"/>
+            <span class="error-msg" id="err-phone"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-date">Date *</label>
+            <input type="date" id="f-date"/>
+            <span class="error-msg" id="err-date"></span>
+          </div>
+
+        </div>
+
+        <div class="form-footer">
+          <button type="submit" class="btn btn-primary" id="submit-btn">
+            Save Sale
+          </button>
+          <button type="button" class="btn btn-outline" onclick="resetForm()">
+            Clear
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════ RECORDS PAGE ════════════ -->
+  <div id="page-records" class="page">
+    <div class="card">
+      <div class="card-title">🗂 Sales Records</div>
+
+      <div class="filters-bar">
+        <input class="filter-search" type="text" id="search-input"
+               placeholder="Search by customer or phone…"
+               oninput="applyFilters()"/>
+        <select id="filter-period" onchange="applyFilters()">
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom Date</option>
+        </select>
+        <input type="date" id="filter-from" style="display:none" oninput="applyFilters()"/>
+        <input type="date" id="filter-to"   style="display:none" oninput="applyFilters()"/>
+        <span id="records-count" style="margin-left:auto;font-size:.8rem;color:var(--muted)"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Customer</th><th>Phone</th>
+              <th>Item</th><th>Qty</th><th>Unit</th><th>Amount (৳)</th>
+            </tr>
+          </thead>
+          <tbody id="records-body">
+            <tr class="empty-row"><td colspan="7">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ STOCK PAGE ════════════ -->
+  <div id="page-stock" class="page">
+    <div class="card">
+      <div class="card-title">📦 Current Stock Levels</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px;">
+        Stock is automatically reduced when a sale is saved. Use the form below to manually adjust stock.
+      </p>
+
+      <div class="table-wrap" style="margin-bottom:20px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th><th>Quantity</th><th>Unit</th><th>Last Updated</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="stock-table-body">
+            <tr class="empty-row"><td colspan="5">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Manual Stock Adjustment -->
+    <div class="card">
+      <div class="card-title">✏️ Manual Stock Update (Restock / Correction)</div>
+      <form id="stock-form" novalidate>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="s-item">Item Name *</label>
+            <select id="s-item">
+              <option value="">— Select Item —</option>
+              <option value="Rice (Miniket)">Rice (Miniket)</option>
+              <option value="Rice (Najirshail)">Rice (Najirshail)</option>
+              <option value="Rice (BR-28)">Rice (BR-28)</option>
+              <option value="Rice (Irri)">Rice (Irri)</option>
+              <option value="Lentil (Masoor)">Lentil (Masoor)</option>
+              <option value="Lentil (Moog)">Lentil (Moog)</option>
+              <option value="Wheat Flour">Wheat Flour</option>
+              <option value="Mustard Oil">Mustard Oil</option>
+              <option value="Soybean Oil">Soybean Oil</option>
+              <option value="Sugar">Sugar</option>
+              <option value="Salt">Salt</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="s-qty">New Quantity *</label>
+            <input type="number" id="s-qty" placeholder="Total qty in stock" min="0" step="0.1"/>
+          </div>
+          <div class="form-group">
+            <label for="s-unit">Unit *</label>
+            <select id="s-unit">
+              <option value="">— Select Unit —</option>
+              <option value="বস্তা">বস্তা (Bag)</option>
+              <option value="মণ">মণ (Mon)</option>
+              <option value="কেজি">কেজি (KG)</option>
+              <option value="লিটার">লিটার (Litre)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button type="submit" class="btn btn-primary">Update Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Toast ────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FIREBASE SDK  — Loaded via CDN (compat mode)
+     ════════════════════════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* ================================================================
+   1. FIREBASE CONFIG  ← Replace with your own Firebase project values
+   ================================================================ */
+const firebaseConfig = {
+   apiKey: "AIzaSyDdpne2jDUfvWeqce89Vsi8j3v0Npx02rI",
+  authDomain: "dealer-management-2ece9.firebaseapp.com",
+  projectId: "dealer-management-2ece9",
+  storageBucket: "dealer-management-2ece9.firebasestorage.app",
+  messagingSenderId: "699838694079",
+  appId: "1:699838694079:web:2b958e99382f9de7c33c0a",
+  measurementId: "G-8GJQMVYJWF"
+
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ================================================================
+   2. HELPERS
+   ================================================================ */
+const $ = id => document.getElementById(id);
+
+// Format number as Bangladeshi Taka
+const taka = n => '৳' + Number(n).toLocaleString('en-IN');
+
+// today/week/month boundaries (UTC+6 aware via simple offset)
+function todayStr() {
+  const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10);
+}
+function weekStart() {
+  const d = new Date(); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0,10);
+}
+function monthStart() {
+  const d = new Date(); d.setHours(0,0,0,0);
+  d.setDate(1); return d.toISOString().slice(0,10);
+}
+
+// Generic toast
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+// Stock icons map
+const itemIcons = {
+  'Rice':    '🌾', 'Lentil': '🫘', 'Wheat': '🌾',
+  'Oil':     '🫙', 'Sugar':  '🍚', 'Salt':  '🧂',
+};
+function iconFor(name) {
+  for (const [k, v] of Object.entries(itemIcons)) {
+    if (name.includes(k)) return v;
+  }
+  return '📦';
+}
+
+/* ================================================================
+   3. PAGE NAVIGATION
+   ================================================================ */
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  $(`page-${name}`).classList.add('active');
+  const idx = ['dashboard','sales','records','stock'].indexOf(name);
+  document.querySelectorAll('.nav-tab')[idx].classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'records')   loadRecords();
+  if (name === 'stock')     loadStockPage();
+}
+
+/* ================================================================
+   4. SALES FORM
+   ================================================================ */
+// Pre-fill today's date
+window.addEventListener('DOMContentLoaded', () => {
+  $('f-date').value = todayStr();
+  loadDashboard(); // load dashboard on start
+});
+
+document.getElementById('sales-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!validateSaleForm()) return;
+
+  const btn = $('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+  const item   = $('f-item').value.trim();
+  const qty    = parseFloat($('f-qty').value);
+  const unit   = $('f-unit').value;
+  const price  = parseFloat($('f-price').value);
+  const cust   = $('f-customer').value.trim();
+  const phone  = $('f-phone').value.trim();
+  const date   = $('f-date').value;
+
+  try {
+    // ── 4a. Save sale ──────────────────────────────────────────
+    await db.collection('sales').add({
+      itemName:     item,
+      quantity:     qty,
+      unit:         unit,
+      price:        price,
+      customerName: cust,
+      phone:        phone,
+      date:         date,
+      timestamp:    firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // ── 4b. Update stock (decrement) ───────────────────────────
+    const stockRef = db.collection('stock').doc(item);
+    const stockDoc = await stockRef.get();
+    if (stockDoc.exists) {
+      const current = stockDoc.data().quantity || 0;
+      await stockRef.update({
+        quantity:    Math.max(0, current - qty),
+        unit:        unit,
+        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      // First time this item appears — create with 0 (or adjust as needed)
+      await stockRef.set({
+        itemName:    item,
+        quantity:    0,
+        unit:        unit,
+        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    showToast('✅ Sale saved successfully!', 'success');
+    resetForm();
+  } catch (err) {
+    console.error(err);
+    showToast('❌ Error saving sale. Check console.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Save Sale';
+  }
+});
+
+function validateSaleForm() {
+  let ok = true;
+  const fields = [
+    { id: 'f-item',     err: 'err-item',     msg: 'Please select an item.' },
+    { id: 'f-qty',      err: 'err-qty',      msg: 'Enter a valid quantity > 0.',     check: v => v > 0 },
+    { id: 'f-unit',     err: 'err-unit',     msg: 'Please select a unit.' },
+    { id: 'f-price',    err: 'err-price',    msg: 'Enter a valid price ≥ 0.',        check: v => v >= 0 },
+    { id: 'f-customer', err: 'err-customer', msg: 'Customer name is required.' },
+    { id: 'f-phone',    err: 'err-phone',    msg: 'Enter a valid 11-digit number.',  check: v => /^01[0-9]{9}$/.test(v) },
+    { id: 'f-date',     err: 'err-date',     msg: 'Date is required.' },
+  ];
+  fields.forEach(f => {
+    const el  = $(f.id);
+    const val = el.value.trim();
+    const fail = !val || (f.check && !f.check(val));
+    $(f.err).textContent = fail ? f.msg : '';
+    el.classList.toggle('error', fail);
+    if (fail) ok = false;
+  });
+  return ok;
+}
+
+function resetForm() {
+  ['f-item','f-qty','f-unit','f-price','f-customer','f-phone'].forEach(id => {
+    const el = $(id); el.value = '';
+    el.classList.remove('error');
+  });
+  $('f-date').value = todayStr();
+  ['err-item','err-qty','err-unit','err-price','err-customer','err-phone','err-date']
+    .forEach(id => $(id).textContent = '');
+}
+
+/* ================================================================
+   5. DASHBOARD
+   ================================================================ */
+async function loadDashboard() {
+  try {
+    const snap = await db.collection('sales').orderBy('timestamp','desc').get();
+    const all  = snap.docs.map(d => d.data());
+
+    const today = todayStr();
+    const wk    = weekStart();
+    const mo    = monthStart();
+
+    const filter = (arr, from) => arr.filter(s => s.date >= from);
+
+    const todayItems = filter(all, today);
+    const weekItems  = filter(all, wk);
+    const monthItems = filter(all, mo);
+
+    const sum = arr => arr.reduce((a, s) => a + (s.price || 0), 0);
+
+    $('stat-today-sales').textContent = taka(sum(todayItems));
+    $('stat-today-count').textContent = `${todayItems.length} transaction${todayItems.length !== 1 ? 's' : ''}`;
+    $('stat-week-sales').textContent  = taka(sum(weekItems));
+    $('stat-week-count').textContent  = `${weekItems.length} transactions`;
+    $('stat-month-sales').textContent = taka(sum(monthItems));
+    $('stat-month-count').textContent = `${monthItems.length} transactions`;
+
+    // Recent 10 sales table
+    const tbody = $('recent-sales-body');
+    const recent = all.slice(0, 10);
+    if (!recent.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No sales yet.</td></tr>';
+    } else {
+      tbody.innerHTML = recent.map(s => `
+        <tr>
+          <td>${s.date}</td>
+          <td>${esc(s.customerName)}</td>
+          <td>${esc(s.itemName)}</td>
+          <td>${s.quantity}</td>
+          <td>${esc(s.unit)}</td>
+          <td><strong>${taka(s.price)}</strong></td>
+        </tr>`).join('');
+    }
+
+    // Stock overview cards
+    loadStockCards('stock-overview-grid');
+
+  } catch (err) {
+    console.error(err);
+    showToast('Error loading dashboard.', 'error');
+  }
+}
+
+/* ================================================================
+   6. RECORDS PAGE
+   ================================================================ */
+let allRecords = [];
+
+async function loadRecords() {
+  try {
+    const snap = await db.collection('sales').orderBy('timestamp','desc').get();
+    allRecords  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    applyFilters();
+  } catch (err) {
+    console.error(err);
+    $('records-body').innerHTML = '<tr class="empty-row"><td colspan="7">Error loading records.</td></tr>';
+  }
+}
+
+$('filter-period').addEventListener('change', () => {
+  const val = $('filter-period').value;
+  $('filter-from').style.display = val === 'custom' ? 'inline-block' : 'none';
+  $('filter-to').style.display   = val === 'custom' ? 'inline-block' : 'none';
+  applyFilters();
+});
+
+function applyFilters() {
+  const search  = $('search-input').value.trim().toLowerCase();
+  const period  = $('filter-period').value;
+  const fromVal = $('filter-from').value;
+  const toVal   = $('filter-to').value;
+
+  let filtered = allRecords.filter(s => {
+    const matchSearch =
+      !search ||
+      (s.customerName && s.customerName.toLowerCase().includes(search)) ||
+      (s.phone && s.phone.includes(search));
+
+    let matchDate = true;
+    if (period === 'today')   matchDate = s.date === todayStr();
+    if (period === 'week')    matchDate = s.date >= weekStart();
+    if (period === 'month')   matchDate = s.date >= monthStart();
+    if (period === 'custom' && fromVal) matchDate = s.date >= fromVal && (!toVal || s.date <= toVal);
+
+    return matchSearch && matchDate;
+  });
+
+  $('records-count').textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
+
+  const tbody = $('records-body');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No records found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(s => `
+    <tr>
+      <td>${s.date}</td>
+      <td>${esc(s.customerName)}</td>
+      <td>${esc(s.phone)}</td>
+      <td>${esc(s.itemName)}</td>
+      <td>${s.quantity}</td>
+      <td>${esc(s.unit)}</td>
+      <td><strong>${taka(s.price)}</strong></td>
+    </tr>`).join('');
+}
+
+/* ================================================================
+   7. STOCK PAGE
+   ================================================================ */
+async function loadStockPage() {
+  await loadStockTable();
+}
+
+async function loadStockTable() {
+  try {
+    const snap = await db.collection('stock').orderBy('itemName').get();
+    const tbody = $('stock-table-body');
+
+    // Also update stat
+    $('stat-stock-items').textContent = snap.size;
+
+    if (!snap.size) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No stock records yet. Add a sale or use the manual update form.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = snap.docs.map(d => {
+      const s = d.data();
+      const qty = s.quantity || 0;
+      let badgeClass = 'badge-green';
+      if (qty <= 0)  badgeClass = 'badge-red';
+      else if (qty <= 5) badgeClass = 'badge-amber';
+      const status = qty <= 0 ? 'Out of Stock' : qty <= 5 ? 'Low Stock' : 'In Stock';
+      const updated = s.lastUpdated?.toDate
+        ? s.lastUpdated.toDate().toLocaleDateString('en-GB') : '—';
+      return `
+        <tr>
+          <td><strong>${esc(s.itemName)}</strong></td>
+          <td>${qty}</td>
+          <td>${esc(s.unit || '—')}</td>
+          <td>${updated}</td>
+          <td><span class="badge ${badgeClass}">${status}</span></td>
+        </tr>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function loadStockCards(gridId) {
+  try {
+    const snap = await db.collection('stock').orderBy('itemName').get();
+    $('stat-stock-items').textContent = snap.size;
+    const grid = $(gridId);
+    if (!snap.size) {
+      grid.innerHTML = '<p style="color:var(--muted);font-size:.875rem;">No stock data yet.</p>';
+      return;
+    }
+    grid.innerHTML = snap.docs.map(d => {
+      const s = d.data();
+      return `
+        <div class="stock-card">
+          <div>
+            <div class="item-name">${esc(s.itemName)}</div>
+            <div class="item-qty">${s.quantity || 0}</div>
+            <div class="item-unit">${esc(s.unit || '')}</div>
+          </div>
+          <div class="stock-icon">${iconFor(s.itemName)}</div>
+        </div>`;
+    }).join('');
+  } catch (err) { console.error(err); }
+}
+
+// Manual stock update form
+document.getElementById('stock-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const item = $('s-item').value;
+  const qty  = parseFloat($('s-qty').value);
+  const unit = $('s-unit').value;
+  if (!item || isNaN(qty) || !unit) {
+    showToast('Please fill all stock fields.', 'error'); return;
+  }
+  try {
+    await db.collection('stock').doc(item).set({
+      itemName:    item,
+      quantity:    qty,
+      unit:        unit,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    showToast('✅ Stock updated!', 'success');
+    $('s-item').value = ''; $('s-qty').value = ''; $('s-unit').value = '';
+    loadStockTable();
+  } catch (err) {
+    console.error(err);
+    showToast('Error updating stock.', 'error');
+  }
+});
+
+/* ================================================================
+   8. UTILITY
+   ================================================================ */
+function esc(str) {
+  if (!str) return '—';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
